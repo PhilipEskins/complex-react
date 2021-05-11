@@ -11,8 +11,6 @@ function HeaderLoggedIn(props) {
     appDispatch({ type: "logout" })
   }
 
-  console.log(appState.user.avatar)
-
   return (
     <div className="flex-row my-3 my-md-0">
       <a href="#" className="text-white mr-2 header-search-icon">
@@ -22,9 +20,9 @@ function HeaderLoggedIn(props) {
         <i className="fas fa-comment"></i>
         <span className="chat-count-badge text-white"> </span>
       </span>
-      <a href="#" className="mr-2">
+      <Link to={`/profile/${appState.user.username}`} className="mr-2">
         <img className="small-header-avatar" src={appState.user.avatar} />
-      </a>
+      </Link>
       <Link className="btn btn-sm btn-success mr-2" to="/create-post">
         Create Post
       </Link>
