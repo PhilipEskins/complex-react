@@ -1,11 +1,16 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useContext } from "react"
 import { useImmerReducer } from "use-immer"
 import Page from "./Page"
 import { useParams, Link } from "react-router-dom"
 import Axios from "axios"
 import LoadingDotsIcon from "./LoadingDotsIcon"
+import StateContext from "../StateContext"
+import DispatchContext from "../DispatchContext"
 
-function ViewSinglePost(props) {
+function EditPost(props) {
+  const appState = useContext(StateContext)
+  const appDispatch = useContext(DispatchContext)
+
   const originalState = {
     title: {
       value: "",
@@ -30,10 +35,30 @@ function ViewSinglePost(props) {
         draft.body.value = action.value.body
         draft.isFetching = false
         break
+      case "titleChange":
+        draft.title.value = action.value
+        break
+      case "bodyChange":
+        draft.body.value = action.value
+        break
+      case "submitRequest":
+        draft.sendCount++
+        return
+      case "saveRequestStarted":
+        draft.isSaving = true
+        return
+      case "saveRequestFinished":
+        draft.isSaving = false
+        return
     }
   }
 
   const [state, dispatch] = useImmerReducer(ourReducer, originalState)
+
+  function submitHandler(e) {
+    e.preventDefault()
+    dispatch({ type: "submitRequest" })
+  }
 
   useEffect(() => {
     const ourRequest = Axios.CancelToken.source()
@@ -53,6 +78,28 @@ function ViewSinglePost(props) {
     }
   }, [])
 
+  useEffect(() => {
+    if (state.sendCount) {
+      dispatch({ type: "saveRequestStarted" })
+      const ourRequest = Axios.CancelToken.source()
+
+      async function fetchPost() {
+        try {
+          const response = await Axios.post(`/post/${state.id}/edit`, { title: state.title.value, body: state.body.value, token: appState.user.token }, { cancelToken: ourRequest.token })
+          dispatch({ type: "saveRequestFinished" })
+          appDispatch({ type: "flashMessage", value: "Post Updated" })
+        } catch (e) {
+          console.log("There was an error with ProfilePosts")
+          console.log(e.response.data)
+        }
+      }
+      fetchPost()
+      return () => {
+        ourRequest.cancel()
+      }
+    }
+  }, [state.sendCount])
+
   if (state.isFetching)
     return (
       <Page title="...">
@@ -62,25 +109,27 @@ function ViewSinglePost(props) {
 
   return (
     <Page title="Edit Post">
-      <form>
+      <form onSubmit={submitHandler}>
         <div className="form-group">
           <label htmlFor="post-title" className="text-muted mb-1">
             <small>Title</small>
           </label>
-          <input value={state.title.value} autoFocus name="title" id="post-title" className="form-control form-control-lg form-control-title" type="text" placeholder="" autoComplete="off" />
+          <input onChange={e => dispatch({ type: "titleChange", value: e.target.value })} value={state.title.value} autoFocus name="title" id="post-title" className="form-control form-control-lg form-control-title" type="text" placeholder="" autoComplete="off" />
         </div>
 
         <div className="form-group">
           <label htmlFor="post-body" className="text-muted mb-1 d-block">
             <small>Body Content</small>
           </label>
-          <textarea value={state.body.value} name="body" id="post-body" className="body-content tall-textarea form-control" type="text" />
+          <textarea onChange={e => dispatch({ type: "bodyChange", value: e.target.value })} value={state.body.value} name="body" id="post-body" className="body-content tall-textarea form-control" type="text" />
         </div>
 
-        <button className="btn btn-primary">Save Update</button>
+        <button className="btn btn-primary" disabled={state.isSaving}>
+          Save Update
+        </button>
       </form>
     </Page>
   )
 }
 
-export default ViewSinglePost
+export default EditPost
