@@ -5,6 +5,7 @@ import Axios from "axios"
 import LoadingDotsIcon from "./LoadingDotsIcon"
 import ReactMarkdown from "react-markdown"
 import ReactTooltip from "react-tooltip"
+import NotFound from "./NotFound"
 
 function ViewSinglePost(props) {
   const { id } = useParams()
@@ -29,6 +30,10 @@ function ViewSinglePost(props) {
       ourRequest.cancel()
     }
   }, [])
+
+  if (!isLoading && !post) {
+    return <NotFound />
+  }
 
   if (isLoading)
     return (
